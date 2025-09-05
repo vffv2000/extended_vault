@@ -1,0 +1,80 @@
+version: "3.8"
+
+services:
+  db:
+    image: postgres:17
+    container_name: postgres_db_ex_vault
+    restart: always
+    env_file:
+      - .env
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  main-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - .env
+    depends_on:
+      - db
+    ports:
+      - "127.0.0.1:1111:8000"
+    volumes:
+      - ./src:/project/src   # только исходники
+    working_dir: /project
+    restart: always
+
+  worker:
+    build: .
+    container_name: celery_worker_ex_vault
+    env_file:
+      - .env
+    command: celery -A src.celery_schedular.celery_worker worker --loglevel=info
+    working_dir: /project
+    environment:
+      - PYTHONPATH=/project/src
+    volumes:
+      - ./src:/project/src
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
+  beat:
+    build: .
+    container_name: celery_worker_beat_ex_vault
+    env_file:
+      - .env
+    command: celery -A src.celery_schedular.celery_worker beat --loglevel=info --scheduler celery.beat:PersistentScheduler
+    working_dir: /project
+    environment:
+      - PYTHONPATH=/project/src
+    volumes:
+      - ./src:/project/src
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
+  rabbitmq:
+    image: rabbitmq:3.12-management
+    container_name: rabbitmq_ex_vault
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: "${RABBITMQ_ADMIN_LOGIN:-admin}"
+      RABBITMQ_DEFAULT_PASS: "${RABBITMQ_ADMIN_PASS:-adminpass}"
+    healthcheck:
+      test: [ "CMD", "rabbitmq-diagnostics", "ping" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres_data:

@@ -15,6 +15,14 @@ celery.conf.beat_schedule = {
     "test-task-print-unix-time": {
         "task": "src.celery_schedular.tasks.print_unix",
         "schedule": 3600,
+    },
+    "task-fetch-data-from-api":
+        {"task": "src.celery_schedular.tasks.fetch_data_from_api",
+         "schedule": 5
+         },
+    "task-send-alert":{
+        "task": "src.celery_schedular.tasks.send_alert",
+        "schedule": 5
     }
 
 }

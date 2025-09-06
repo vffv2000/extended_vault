@@ -11,10 +11,18 @@ async def async_fetch_data_from_api():
     URL = "https://starknet.app.extended.exchange/api/v1/vault/public/summary"
 
     async with httpx.AsyncClient(timeout=10) as client:
-        response = await client.get(URL)
-        response.raise_for_status()
-        data = response.json()
-        log.info(f"[TASK] Data fetched from API: {data}")
+        try:
+            response = await client.get(URL)
+            response.raise_for_status()
+            data = response.json()
+            log.info(f"[TASK] Data fetched from API: {data}")
+            return data
+        except httpx.HTTPStatusError as e:
+            # Сервер вернул ошибку, например 451
+            log.warning(f"[TASK] HTTP error {e.response.status_code} for {URL}: {e.response.text}")
+        except httpx.RequestError as e:
+            # Ошибка соединения или таймаут
+            log.error(f"[TASK] Request failed for {URL}: {str(e)}")
     async with async_session() as session:
         vault_manager = VaultsManager(session)
         data=data.get("data")

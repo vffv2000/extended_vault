@@ -1,16 +1,19 @@
 import tempfile
 
 from aiogram import types, Router
+from aiogram.enums import ParseMode
 from aiogram.filters import Command
 from datetime import datetime, timedelta
-import io
+
 import matplotlib.pyplot as plt
 from aiogram.fsm.context import FSMContext
-from aiogram.types import BufferedInputFile, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
+from aiogram.types import  CallbackQuery
 from DB.sqlalchemy_database_manager import async_session
 from DB.managers.vaults_manager import VaultsManager
 from core.config import settings
 from aiogram.types.input_file import FSInputFile
+
+from texts.texts import build_stats_keyboard, built_stats_text
 
 router = Router()
 
@@ -39,12 +42,7 @@ async def handle_stats(user_id):
     min_equity = min(equities)
     current_equity = equities[-1]
 
-    text = (
-        f"📊 Vault statistics (last 24h):\n"
-        f"Max equity: {max_equity}\n"
-        f"Min equity: {min_equity}\n"
-        f"Current equity: {current_equity}"
-    )
+
 
     # Создаём график
     plt.figure(figsize=(10, 5))
@@ -57,18 +55,15 @@ async def handle_stats(user_id):
     plt.ylabel("Equity")
     plt.legend()
     plt.grid(True)
-    keyboard = InlineKeyboardMarkup(inline_keyboard=[
-        [
-            InlineKeyboardButton(text="Start", callback_data="start")
-        ]
-    ])
+    keyboard = await build_stats_keyboard()
     # Сохраняем во временный файл
     with tempfile.NamedTemporaryFile(suffix=".png") as tmp_file:
         plt.savefig(tmp_file.name)
         tmp_file.flush()  # убедимся, что всё записано
+        text = await built_stats_text(max_equity, min_equity, current_equity)
 
         await settings.telegram_bot.send_photo(chat_id=user_id,
                                                photo=FSInputFile(tmp_file.name, filename="vault_stats.png"),
-                                               caption=text, reply_markup=keyboard)
+                                               caption=text, reply_markup=keyboard,parse_mode=ParseMode.HTML)
 
     plt.close()

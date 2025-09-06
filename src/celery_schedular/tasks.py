@@ -2,6 +2,7 @@
 import asyncio
 import time
 
+from aiogram.enums import ParseMode
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from celery import shared_task
 
@@ -11,6 +12,7 @@ from DB.sqlalchemy_database_manager import async_session
 from celery_schedular.services.fetch_data_from_api_service import async_fetch_data_from_api
 from core.config import settings
 from core.custom_logs import log
+from texts.texts import build_notification_keyboard, build_notification_text
 
 
 @shared_task
@@ -49,14 +51,10 @@ async def async_send_alert():
             log.info(f"[TASK] Users for notification: {len(users)}")
         for user in users:
             log.info(f"[TASK] Sending alert to user {user.telegram_id}")
-            message = (f"⚠️⚠️⚠️ALERT⚠️⚠️⚠️\n\n"
-                       f"Your position {user.limit} can be added in vault!\n"
-                       f"Current equity: {equity}\n\n"
-                       f"⚠️⚠️⚠️ALERT⚠️⚠️⚠️")
-            url = "https://app.extended.exchange/vault"
-            keyboard = InlineKeyboardMarkup(inline_keyboard=[
-                [
-                    InlineKeyboardButton(text='CLICK', url=url),
-                ]
-            ])
-            await settings.telegram_bot.send_message(user.telegram_id, message,reply_markup=keyboard)
+            message =await build_notification_text(limit=user.limit,
+                                                   equity=equity)
+
+
+            await settings.telegram_bot.send_message(user.telegram_id, message,
+                                                     reply_markup=await build_notification_keyboard(),
+                                                     parse_mode=ParseMode.HTML)

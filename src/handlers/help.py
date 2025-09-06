@@ -1,22 +1,11 @@
 from aiogram import Router
-from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.types import Message
 from aiogram.filters import Command
+
+from texts.texts import build_help_keyboard, HELP_TEXT
 
 router = Router()
 
 @router.message(Command("help"))
 async def cmd_ping(message: Message):
-    message_text="""
-/start - start bot
-/stats - get stats about vaults
-/help - get help
-    """
-    keyboard = InlineKeyboardMarkup(inline_keyboard=[
-        [
-            InlineKeyboardButton(text="Start", callback_data="start"),
-        ],
-        [
-            InlineKeyboardButton(text="Stats", callback_data="stats")
-        ]
-    ])
-    await message.answer(message_text,reply_markup=keyboard)
+    await message.answer(HELP_TEXT,reply_markup=await build_help_keyboard())

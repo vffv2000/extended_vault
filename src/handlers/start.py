@@ -1,5 +1,6 @@
 from aiogram import Router
-from aiogram.types import Message, CallbackQuery, InlineKeyboardButton, InlineKeyboardMarkup
+from aiogram.enums import ParseMode
+from aiogram.types import Message, CallbackQuery
 from aiogram.filters import Command
 
 from DB.managers.users_manager import UserManager
@@ -8,6 +9,8 @@ from aiogram.fsm.state import StatesGroup, State
 from aiogram.fsm.context import FSMContext
 
 from core.config import settings
+from texts.texts import build_start_text, build_start_keyboard, INPUT_NUMBER_TEXT, INPUT_NUMBER_ERROR, \
+    INPUT_NUMBER_ERROR_2
 
 router = Router()
 
@@ -36,30 +39,13 @@ async def handle_start(user_id,username):
         user = await user_manager.create_user_if_not_exist(user_id, username)
 
     user_status = user.is_notified
-    status = "Enabled" if user_status else "Disabled"
-    limit = user.limit if hasattr(user, "limit") and user.limit is not None else "not set"
 
-    text = f"Notifications: {status}\nCurrent limit: {limit}"
-    await settings.telegram_bot.send_message(chat_id=user_id,text=text, reply_markup=await build_start_keyboard(user_status))
+    text = await build_start_text(status=user_status,limit=user.limit)
+    await settings.telegram_bot.send_message(chat_id=user_id,text=text,
+                                             reply_markup=await build_start_keyboard(user_status),
+                                             parse_mode=ParseMode.HTML )
 
-async def build_start_keyboard(status: bool) -> InlineKeyboardMarkup:
-    if status:
-        btn_text = "🔴 Turn off notifications"
-    else:
-        btn_text = "🟢 Turn on notifications"
 
-    keyboard = InlineKeyboardMarkup(inline_keyboard=[
-        [
-            InlineKeyboardButton(text=btn_text, callback_data="toggle_notify"),
-        ],
-        [
-            InlineKeyboardButton(text="Set limit", callback_data="set_limit")
-        ],
-        [
-            InlineKeyboardButton(text="Stats", callback_data="stats")
-        ]
-    ])
-    return keyboard
 
 
 @router.callback_query(lambda c: c.data == "toggle_notify")
@@ -68,11 +54,14 @@ async def toggle_notify_callback(callback: CallbackQuery):
     async with async_session() as session:
         user_manager = UserManager(session)
         user = await user_manager.toggle_notifications(user_id)  # switches is_notified
-        status = "Enabled" if user.is_notified else "Disabled"
 
+    user_status=user.is_notified
+
+    text= await build_start_text(status=user_status,limit=user.limit)
     await callback.message.edit_text(
-        f"Notifications are now: {status}\nCurrent limit: {user.limit if user.limit else 'not set'}",
-        reply_markup=await build_start_keyboard(user.is_notified)
+        text=text,
+        reply_markup=await build_start_keyboard(user.is_notified),
+        parse_mode=ParseMode.HTML
     )
     await callback.answer()
 
@@ -82,7 +71,7 @@ async def set_limit_callback(callback: CallbackQuery, state: FSMContext):
     await state.set_state(LimitStates.waiting_for_limit)
 
     await state.update_data(bot_message_id=callback.message.message_id)
-    await callback.message.edit_text("Please enter a new limit (number):")
+    await callback.message.edit_text(INPUT_NUMBER_TEXT)
     await callback.answer()
 
 
@@ -103,7 +92,7 @@ async def process_limit(message: Message, state: FSMContext):
         await message.bot.edit_message_text(
             chat_id=message.chat.id,
             message_id=bot_message_id,
-            text="❌ Please enter a valid number:"
+            text=INPUT_NUMBER_ERROR
         )
         return
 
@@ -111,7 +100,7 @@ async def process_limit(message: Message, state: FSMContext):
         await message.bot.edit_message_text(
             chat_id=message.chat.id,
             message_id=bot_message_id,
-            text="⚠️ Limit must be greater than 0 and less than 100000."
+            text=INPUT_NUMBER_ERROR_2
         )
         return
 
@@ -120,11 +109,12 @@ async def process_limit(message: Message, state: FSMContext):
     async with async_session() as session:
         user_manager = UserManager(session)
         user = await user_manager.update_limit(user_id, new_limit)
+    text = await build_start_text(status=user.is_notified,limit=user.limit)
 
     await message.bot.edit_message_text(
         chat_id=message.chat.id,
         message_id=bot_message_id,
-        text=f"✅ New limit set: {new_limit}\nNotifications: {'Enabled' if user.is_notified else 'Disabled'}",
-        reply_markup=await build_start_keyboard(user.is_notified)
+        text=text,
+        reply_markup=await build_start_keyboard(user.is_notified),parse_mode=ParseMode.HTML
     )
     await state.clear()

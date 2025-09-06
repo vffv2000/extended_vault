@@ -4,6 +4,9 @@ services:
   db:
     image: postgres:17
     container_name: postgres_db_ex_vault
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
     restart: always
     env_file:
       - .env
@@ -20,6 +23,9 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
     env_file:
       - .env
     depends_on:
@@ -34,6 +40,9 @@ services:
   worker:
     build: .
     container_name: celery_worker_ex_vault
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
     env_file:
       - .env
     command: celery -A src.celery_schedular.celery_worker worker --loglevel=info
@@ -49,6 +58,9 @@ services:
   beat:
     build: .
     container_name: celery_worker_beat_ex_vault
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
     env_file:
       - .env
     command: celery -A src.celery_schedular.celery_worker beat --loglevel=info --scheduler celery.beat:PersistentScheduler
@@ -64,6 +76,9 @@ services:
   rabbitmq:
     image: rabbitmq:3.12-management
     container_name: rabbitmq_ex_vault
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
     ports:
       - "5672:5672"
       - "15672:15672"

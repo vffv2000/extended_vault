@@ -6,21 +6,15 @@ from dotenv import load_dotenv
 
 from DB.sqlalchemy_database_manager import Base
 import DB.models
+from core.config import settings
 
 # Загружаем .env
 load_dotenv(dotenv_path=os.path.join(os.path.dirname(__file__), "..", ".env"))
 
-DB_USER = os.getenv("DB_USER")
-DB_PASSWORD = os.getenv("DB_PASSWORD")
-DB_HOST = os.getenv("DB_HOST")
-DB_PORT = os.getenv("DB_PORT")
-DB_NAME = os.getenv("DB_NAME")
-
-SQLALCHEMY_DATABASE_URL = f"postgresql+asyncpg://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
 
 # Alembic config
 config = context.config
-config.set_main_option("sqlalchemy.url", SQLALCHEMY_DATABASE_URL)
+config.set_main_option("sqlalchemy.url", settings.get_sync_database_connection_string)
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)

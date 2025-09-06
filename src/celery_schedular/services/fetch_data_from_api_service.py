@@ -16,7 +16,7 @@ async def async_fetch_data_from_api():
             response.raise_for_status()
             data = response.json()
             log.info(f"[TASK] Data fetched from API: {data}")
-            return data
+
         except httpx.HTTPStatusError as e:
             # Сервер вернул ошибку, например 451
             log.warning(f"[TASK] HTTP error {e.response.status_code} for {URL}: {e.response.text}")

@@ -43,6 +43,6 @@ class Settings(BaseSettings):
     @property
     def get_sync_database_connection_string(self) -> str:
         """Generate the database connection string for psycopg."""
-        return f"postgresql://{self.db_user}:{self.db_password}@localhost:{self.db_port}/{self.db_name}"
+        return f"postgresql://{self.db_user}:{self.db_password}@db:{self.db_port}/{self.db_name}"
 
 settings = Settings()

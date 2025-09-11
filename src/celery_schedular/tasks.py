@@ -44,7 +44,7 @@ async def async_send_alert():
         vault_manager = VaultsManager(session)
         vault_data = await vault_manager.get_last_vault()
         equity=vault_data.equity
-        current_free_space = 20000000-float(equity)
+        current_free_space = 19000000-float(equity)
         async with async_session() as session:
             user_manager = UserManager(session)
             users= await user_manager.get_and_update_users_for_notification(value=current_free_space)
